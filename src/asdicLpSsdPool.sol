@@ -32,20 +32,17 @@ contract ASDICLPSSDPOOL {
     address public lock;
     IAsdicLpPool public asdicLpPool;
 
-    constructor() {
+    constructor(address _asdicLpPool, address _ssd) {
         owner = msg.sender;
+        ssd = IERC20(_ssd);
+        lock = address(new TokenLock(_ssd));
+        asdicLpPool = IAsdicLpPool(_asdicLpPool);
+        IERC20(ssd).approve(address(lock), type(uint).max);
     }
 
     function setOwner(address _owner) external {
         require(msg.sender == owner, "Not owner");
         owner = _owner;
-    }
-    function setAddress(address _asdicLpPool, address _ssd) external {
-        require(msg.sender == owner, "Not owner");
-        ssd = IERC20(_ssd);
-        lock = address(new TokenLock(_ssd));
-        asdicLpPool = IAsdicLpPool(_asdicLpPool);
-        IERC20(ssd).approve(address(lock), type(uint).max);
     }
     function setSubHalfTime(uint _time) external {
         require(msg.sender == owner, "No owner to set the time");

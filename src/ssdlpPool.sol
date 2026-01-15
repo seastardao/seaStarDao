@@ -7,6 +7,9 @@ import "./lock.sol";
 event Stake(address indexed user, uint256 amount, uint256 time);
 event Take(address indexed user, uint256 amount);
 event Claim(address indexed user, uint256 amount);
+interface ISSD {
+    function uniswapV2Pair() external view returns (address);
+}
 contract SSDLPPOOL {
     enum opreate {
         stake,
@@ -45,21 +48,11 @@ contract SSDLPPOOL {
     address public lock;
     IPancakePair public ssdPair;
 
-    constructor() {
+    constructor(address _ssd) {
         owner = msg.sender;
-    }
-    function setAddress(
-        address _ssdPair,
-        address _ssd,
-        address _consensusAddress
-    ) external {
-        require(msg.sender == owner, "Not owner");
         lock = address(new TokenLock(_ssd));
         ssd = IERC20(_ssd);
-        ssdPair = IPancakePair(_ssdPair);
-        consensusAddress = _consensusAddress;
-
-        IPancakePair(ssdPair).approve(address(this), type(uint).max);
+        ssdPair = IPancakePair(ISSD(_ssd).uniswapV2Pair());
         IERC20(ssd).approve(address(lock), type(uint).max);
     }
 
@@ -74,6 +67,10 @@ contract SSDLPPOOL {
         days_200 = _days200;
         days_300 = _days300;
         days_500 = _days500;
+    }
+    function setConsensus(address _consensusAddress) external {
+        require(msg.sender == owner, "No owner to set the consensus address");
+        consensusAddress = _consensusAddress;
     }
 
     function setSubHalfTime(uint _time) external {

@@ -12,7 +12,6 @@ contract SPEEDLOCK {
 
     IERC20 public lockToken;
     address public oldLock;
-    address public owner;
     address public starNodeWork;
     mapping(address => uint) public speedCount;
     uint public targetTime = 30 days;
@@ -29,24 +28,11 @@ contract SPEEDLOCK {
     event Locking(address indexed user, uint256 amount);
     event Withdraw(address indexed user, uint256 amount);
 
-    constructor() {
+    constructor(address _ssd, address _starNodeWork, address _starNodeData) {
         UPGRADE_LOCK_DURATION = 360 days;
-        owner = msg.sender;
-    }
-
-    function setAddress(
-        address _token,
-        address _starNodeWork,
-        address _starNodeData
-    ) external {
-        require(msg.sender == owner, "only owner");
-        lockToken = IERC20(_token);
+        lockToken = IERC20(_ssd);
         starNodeWork = _starNodeWork;
         starNodeData = STARNODEDATA(_starNodeData);
-    }
-    function setTargetTime(uint _time) external {
-        require(msg.sender == owner, "only owner");
-        targetTime = _time;
     }
 
     function awaitSpeedRate(address _user) public view returns (uint) {
@@ -183,10 +169,6 @@ contract SPEEDLOCK {
     }
     function abs(int x) internal pure returns (uint) {
         return x >= 0 ? uint(x) : uint(-x);
-    }
-    function transferShipOwner(address _address) external {
-        require(msg.sender == owner);
-        owner = _address;
     }
 
     modifier onlyStarNodeWork() {

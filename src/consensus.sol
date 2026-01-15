@@ -10,16 +10,19 @@ import "./lock.sol";
 interface SPARKPOOL {
     function balanceOf(address) external view returns (uint256);
 }
+interface ISSD {
+    function uniswapV2Pair() external view returns (address);
+}
 contract CONSENSUS {
     uint public consensusTotal;
     address public owner;
     address public ssdLpPool;
-    IERC20 public mos;
+    IERC20 public mos = IERC20(0xc9C8050639c4cC0DF159E0e47020d6e392191407);
     IERC20 public ssd;
-    IROUTE public route;
-    ILPQUA public lpqua;
+    IROUTE public route = IROUTE(0x10ED43C718714eb63d5aA57B78B54704E256024E);
+    ILPQUA public lpqua = ILPQUA(0x084285aa344A31d72D1505B1e79C698479134F79);
     address public ssdPair;
-    address public sparkPool;
+    address public sparkPool = 0x7dc416F1417b007A8aa73D79D5eFEC0cefB1Ab1C;
     TokenLock public lock;
     uint public tempLpqua;
     address public nft;
@@ -27,34 +30,17 @@ contract CONSENSUS {
 
     mapping(address => bool) public isConsensus;
 
-    constructor() {
+    constructor(address _ssd, address _ssdLpPool) {
         owner = msg.sender;
-    }
-    function setAddress(
-        address _lpqua,
-        address _mos,
-        address _ssdPair,
-        address _route,
-        address _ssd,
-        address _sparkPool,
-        address _ssdLpPool,
-        address _consensusNft
-    ) external {
-        require(msg.sender == owner, "Not owner");
-        lpqua = ILPQUA(_lpqua);
-        mos = IERC20(_mos);
-        ssdPair = _ssdPair;
-        route = IROUTE(_route);
+        ssdPair = ISSD(_ssd).uniswapV2Pair();
         ssd = IERC20(_ssd);
-        sparkPool = _sparkPool;
-        ssdLpPool = _ssdLpPool;
-        nft = _consensusNft;
+        nft = address(new CONSENSUSNFT(address(this)));
         lock = new TokenLock(address(ssd));
+        ssdLpPool = _ssdLpPool;
         IERC20(ssd).approve(address(lock), type(uint).max);
         IERC20(mos).approve(address(route), type(uint).max);
         IERC20(ssd).approve(address(route), type(uint).max);
-        IERC20(ssdPair).approve(_ssdLpPool, type(uint).max);
-        ssdLpPool = _ssdLpPool;
+        IERC20(ssdPair).approve(ssdLpPool, type(uint).max);
     }
 
     function transferOwnership(address _newOwner) external {

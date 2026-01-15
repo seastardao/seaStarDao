@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: MIT
 
 pragma solidity ^0.8.30;
+import "./marketCap.sol";
 /**
  * @dev Interface of the ERC20 standard as defined in the EIP.
  */
@@ -599,8 +600,7 @@ interface IUniswapV2Router02 {
 }
 
 contract TokenReceiver {
-    constructor(address ssd, address mos, address usdt) {
-        IERC20(ssd).approve(msg.sender, type(uint256).max);
+    constructor(address mos, address usdt) {
         IERC20(mos).approve(msg.sender, type(uint256).max);
         IERC20(usdt).approve(msg.sender, type(uint256).max);
     }
@@ -638,12 +638,9 @@ contract SSD is ERC20, Ownable {
 
     address public deadAddress = address(0xDead);
     address public router = 0x10ED43C718714eb63d5aA57B78B54704E256024E;
-    address public mos;
-    address public usdt;
-
+    address public usdt = 0x55d398326f99059fF775485246999027B3197955;
+    address public mos = 0xc9C8050639c4cC0DF159E0e47020d6e392191407;
     address public treasury;
-    IERC20 public currency;
-
     address public tokenReceiver;
     address public marketCap;
     bool public swapping;
@@ -658,25 +655,9 @@ contract SSD is ERC20, Ownable {
         uint256 ethReceived,
         uint256 tokensIntoLiqudity
     );
-    constructor() ERC20("SSDTOKEN", "SSD", 200000000e18) {}
-
-    function setTradingEnabled(bool _tradingEnabled) external onlyOwner {
-        tradingEnabled = _tradingEnabled;
-    }
-    function setAddress(
-        address _treasury,
-        address _marketCap,
-        address _mos,
-        address _usdt
-    ) external onlyOwner {
-        treasury = _treasury;
-        marketCap = _marketCap;
+    constructor() ERC20("SSDTOKEN", "SSD", 200000000e18) {
         uniswapV2Router = IUniswapV2Router02(router);
         swapTokensAtAmount = 1e10;
-        mos = _mos;
-        usdt = _usdt;
-
-        currency = IERC20(mos);
 
         address pairAddress = IUniswapV2Factory(uniswapV2Router.factory())
             .createPair(address(this), mos);
@@ -692,14 +673,22 @@ contract SSD is ERC20, Ownable {
         deadAddress = address(0xDead);
 
         IERC20(usdt).approve(router, type(uint256).max);
-        tokenReceiver = address(new TokenReceiver(address(this), mos, usdt));
+        tokenReceiver = address(new TokenReceiver(mos, usdt));
 
         tradingEnabled = true;
+    }
+    function setMarketCap(address _marketCap) public onlyOwner {
+        marketCap = _marketCap;
+        treasury = MARKETCAP(marketCap).treasury();
+    }
+
+    function setTradingEnabled(bool _tradingEnabled) external onlyOwner {
+        tradingEnabled = _tradingEnabled;
     }
 
     function _isAddLp() internal view returns (bool isAdd) {
         (uint112 _reserve0, uint112 _reserve1, ) = uniswapV2Pair.getReserves();
-        uint currencyBalance = currency.balanceOf(address(uniswapV2Pair));
+        uint currencyBalance = IERC20(mos).balanceOf(address(uniswapV2Pair));
 
         if (isCurrencyToken0) {
             isAdd = currencyBalance > _reserve0;
@@ -711,7 +700,7 @@ contract SSD is ERC20, Ownable {
     function _isRemoveLp() internal view returns (bool isRemove) {
         if (isCurrencyToken0) {
             (uint r0, , ) = uniswapV2Pair.getReserves();
-            uint bal0 = currency.balanceOf(address(uniswapV2Pair));
+            uint bal0 = IERC20(mos).balanceOf(address(uniswapV2Pair));
             isRemove = bal0 < r0;
         }
     }
@@ -740,7 +729,7 @@ contract SSD is ERC20, Ownable {
             return;
         }
 
-        uint256 contractTokenBalance = balanceOf(tokenReceiver);
+        uint256 contractTokenBalance = balanceOf(address(this));
         bool canSwap = contractTokenBalance >= swapTokensAtAmount;
         bool isAdd = !swapping && ammPairs[recipient] && _isAddLp();
         if (canSwap && !isAdd && !swapping && !ammPairs[sender]) {
@@ -751,14 +740,13 @@ contract SSD is ERC20, Ownable {
         if (!swapping && ammPairs[recipient] && !isAdd) {
             uint totalFee = (amount * 3) / 100;
             amount -= totalFee;
-            super._transfer(sender, tokenReceiver, (amount * 3) / 100);
+            super._transfer(sender, address(this), (amount * 3) / 100);
         }
 
         super._transfer(sender, recipient, amount);
     }
 
     function swapAndLiquify(uint256 tokens) private {
-        safeTransferFrom(address(this), tokenReceiver, address(this), tokens);
         uint value = tokens / 3;
         swapTokensForEth(value, mos, treasury);
         uint toSubValue = (tokens - value);
@@ -797,7 +785,7 @@ contract SSD is ERC20, Ownable {
                 address(mos),
                 _tokenReceiver,
                 address(this),
-                currency.balanceOf(tokenReceiver)
+                IERC20(mos).balanceOf(tokenReceiver)
             );
         } else if (tokenType == usdt) {
             address[] memory path = new address[](3);

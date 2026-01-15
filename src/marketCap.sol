@@ -1,13 +1,13 @@
 pragma solidity ^0.8.30;
 import {IROUTE} from "./interface/IROUTE.sol";
 import {ITOKEN} from "./interface/IToken.sol";
-import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/utils/math/Math.sol";
+
 contract TREASURY {
     address public owner = address(0xDead);
     constructor(address _marketCap, address _mos, address _ssd) {
-        IERC20(_mos).approve(_marketCap, type(uint256).max);
-        IERC20(_ssd).approve(_marketCap, type(uint256).max);
+        ITOKEN(_mos).approve(_marketCap, type(uint256).max);
+        ITOKEN(_ssd).approve(_marketCap, type(uint256).max);
     }
 }
 
@@ -15,8 +15,8 @@ contract MARKETCAP {
     using Math for uint256;
     address public owner;
     address public ssd;
-    address public mos;
-    address public mosPair;
+    address public mos = 0xc9C8050639c4cC0DF159E0e47020d6e392191407;
+    address public mosPair = 0xB51f9508B88F0868aE14E74C5D7d1F34E2f419c1;
     address public ssdPair;
     address public deadAddress = address(0xDead);
     uint public marketPrice;
@@ -33,8 +33,13 @@ contract MARKETCAP {
     mapping(address => bool) private tradeAddress;
     IROUTE public route = IROUTE(0x10ED43C718714eb63d5aA57B78B54704E256024E);
 
-    constructor() {
+    constructor(address _ssd) {
         owner = msg.sender;
+        ssd = _ssd;
+        ITOKEN(ssd).approve(address(route), type(uint).max);
+        treasury = address(new TREASURY(address(this), mos, ssd));
+        ITOKEN(mos).approve(address(route), type(uint).max);
+        ssdPair = ITOKEN(ssd).uniswapV2Pair();
     }
     function isTrade() external view returns (bool) {
         address[] memory path = new address[](2);
@@ -233,19 +238,6 @@ contract MARKETCAP {
     }
     function setTime(uint _time) external onlyOwner {
         periodTime = _time;
-    }
-    function setAddress(
-        address _ssd,
-        address _mos,
-        address _mosPair
-    ) external onlyOwner {
-        ssd = _ssd;
-        mos = _mos;
-        ITOKEN(ssd).approve(address(route), type(uint).max);
-        treasury = address(new TREASURY(address(this), mos, ssd));
-        ITOKEN(mos).approve(address(route), type(uint).max);
-        mosPair = _mosPair;
-        ssdPair = ITOKEN(ssd).uniswapV2Pair();
     }
 
     function setTradeAddress(address _addr) public {

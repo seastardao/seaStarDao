@@ -5,21 +5,24 @@ import "./lock.sol";
 import "./marketNode.sol";
 import "./starNodeData.sol";
 import "./marketNode.sol";
-
 contract STARNODEWORK {
-    address public owner;
     address public ssdStakeContract;
     address public ssd;
-    SPEEDLOCK public starLightLockToken;
-
+    SPEEDLOCK public speedLock;
     mapping(address => bool) public referralCountStatus;
-
     MARKETNODE public marketNode;
     STARNODEDATA public starNodeData;
-
     TokenLock public lockToken;
-    constructor() {
-        owner = msg.sender;
+    constructor(address _ssd, address _marketNode, address _ssdStaked) {
+        marketNode = MARKETNODE(_marketNode);
+        ssd = _ssd;
+        lockToken = new TokenLock(_ssd);
+
+        IERC20(ssd).approve(address(lockToken), type(uint256).max);
+        ssdStakeContract = _ssdStaked;
+        starNodeData = new STARNODEDATA(address(this));
+        speedLock = new SPEEDLOCK(ssd, address(this), address(starNodeData));
+        IERC20(ssd).approve(address(speedLock), type(uint256).max);
     }
 
     function ssdStakeClaimToStartLink(address _user, uint _amount) external {
@@ -46,7 +49,7 @@ contract STARNODEWORK {
             starNodeData.setStarNodeSupIsZero(sender);
         } else if (_type == 2) {
             amount = starNodeData.starNodeLight(sender);
-            starLightLockToken.locking(sender, (amount * 70) / 100);
+            speedLock.locking(sender, (amount * 70) / 100);
             IERC20(ssd).transfer(sender, (amount * 30) / 100);
             starNodeData.setStarNodeLightIsZero(sender);
         }
@@ -79,7 +82,7 @@ contract STARNODEWORK {
             _user
         );
         for (uint8 i; i < supervisors.length - 1; i++) {
-            currentLevel = starNodeData.starLinkLevel(supervisors[i]);
+            currentLevel = starNodeData.starLevel(supervisors[i]);
             if (s10Count == 2) {
                 break;
             }
@@ -164,9 +167,9 @@ contract STARNODEWORK {
             "Not ssd stake contract"
         );
         require(_amount != 0, "Amount must be non-zero");
-        uint speedTime = starLightLockToken.speedUpdateTime(_user);
+        uint speedTime = speedLock.speedUpdateTime(_user);
         if (speedTime == 0) {
-            starLightLockToken.setSpeedUpdateTime(_user);
+            speedLock.setSpeedUpdateTime(_user);
         }
 
         address _sup = marketNode.supervisor(_user);
@@ -201,7 +204,7 @@ contract STARNODEWORK {
             uint maxMarketValue = uint(maxMarket.amount) / 1e18;
             total = total - maxMarketValue;
             _level = _computerLeave(hold, dire, total);
-            starNodeData.setStarLinkLevel(tempUser, _level);
+            starNodeData.setStarLevel(tempUser, _level);
         }
     }
     function _computerLeave(
@@ -247,7 +250,6 @@ contract STARNODEWORK {
         address[] memory supervisors = MARKETNODE(marketNode).getSupervisor(
             _user
         );
-        uint256 currentTime = block.timestamp;
         address sup;
         temp = supervisors[0];
         for (uint8 i = 1; i < supervisors.length - 1; i++) {
@@ -276,31 +278,5 @@ contract STARNODEWORK {
         }
 
         return true;
-    }
-    function setAddress(
-        address _ssd,
-        address _ssdStaked,
-        address _starNodeData,
-        address _marketNode,
-        address _starLightLockToken,
-        address _lockToken
-    ) external onlyOwner {
-        marketNode = MARKETNODE(_marketNode);
-        starNodeData = STARNODEDATA(_starNodeData);
-        ssd = _ssd;
-        starLightLockToken = SPEEDLOCK(_starLightLockToken);
-        lockToken = TokenLock(_lockToken);
-
-        IERC20(ssd).approve(address(lockToken), type(uint256).max);
-        IERC20(ssd).approve(address(starLightLockToken), type(uint256).max);
-        ssdStakeContract = _ssdStaked;
-    }
-    function transferOwnership(address _newOwner) public onlyOwner {
-        require(_newOwner != address(0), "New owner is zero address");
-        owner = _newOwner;
-    }
-    modifier onlyOwner() {
-        require(msg.sender == owner, "Not owner");
-        _;
     }
 }

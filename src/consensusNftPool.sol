@@ -36,13 +36,8 @@ contract CONSENSUSNFTPOOL is IERC721Receiver {
     uint public yearHalfAmount = 5000000e18;
     uint public subHalfTime = 800 days;
 
-    constructor() {
+    constructor(address _ssd, address _consensusNft) {
         owner = msg.sender;
-    }
-    function setAddress(
-        address _ssd,
-        address _consensusNft
-    ) external onlyOwner {
         ssd = _ssd;
         consensusNft = _consensusNft;
         lock = address(new TokenLock(_ssd));
@@ -65,10 +60,8 @@ contract CONSENSUSNFTPOOL is IERC721Receiver {
         subHalfTime = _time;
     }
 
-    function setOwner(address _address) external onlyOwner returns (bool) {
-        require(_address != address(0), "Pool Owner address can not zero");
+    function transferOwnerShip(address _address) external onlyOwner {
         owner = _address;
-        return true;
     }
 
     function updateIndex(opreate _oprea) internal {

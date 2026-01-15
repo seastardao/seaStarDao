@@ -8,7 +8,7 @@ contract STARNODEDATA {
         uint index;
         uint rewardAmount;
     }
-    address public owner;
+
     mapping(address => int) public holdPositionAmount;
     mapping(address => mapping(address => int)) public directReferralAmount;
     mapping(address => int) public referralCount;
@@ -18,12 +18,12 @@ contract STARNODEDATA {
     mapping(address => int256) public directReferralTotalAmount;
     mapping(address => int) public totalMarket;
     mapping(address => MAXMARKET) public maxMarket;
-    mapping(address => uint) public starLinkLevel;
+    mapping(address => uint) public starLevel;
 
     address public starNodeWork;
 
-    constructor() {
-        owner = msg.sender;
+    constructor(address _starNodeWork) {
+        starNodeWork = _starNodeWork;
     }
 
     function setMaxMarket(
@@ -49,11 +49,11 @@ contract STARNODEDATA {
         directReferralAmount[_sup][_user] = _positionAmount;
     }
 
-    function setStarLinkLevel(
+    function setStarLevel(
         address _user,
         uint _level
     ) external onlyStarNodeWork {
-        starLinkLevel[_user] = _level;
+        starLevel[_user] = _level;
     }
 
     function setTotalMarket(
@@ -104,10 +104,6 @@ contract STARNODEDATA {
         holdPositionAmount[_user] += _amount;
     }
 
-    function setAddress(address _starNodeWork) external onlyOwner {
-        starNodeWork = _starNodeWork;
-    }
-
     function getMaxMarket(
         address _user
     ) external view returns (MAXMARKET memory) {
@@ -117,14 +113,5 @@ contract STARNODEDATA {
     modifier onlyStarNodeWork() {
         require(msg.sender == starNodeWork, "only starNodeWork");
         _;
-    }
-
-    modifier onlyOwner() {
-        require(msg.sender == owner, "only owner");
-        _;
-    }
-
-    function transferOwnership(address _newOwner) external onlyOwner {
-        owner = _newOwner;
     }
 }

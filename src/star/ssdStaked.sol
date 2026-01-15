@@ -34,6 +34,7 @@ contract SSDSTAKED {
         uint endTime;
         uint postionAmount;
         uint updateTime;
+        uint claimAmount;
     }
     StakedInfo public globalStakedInfo;
     mapping(address => StakedInfo) public userStakedInfos;
@@ -53,10 +54,15 @@ contract SSDSTAKED {
     IERC20 public ssd;
     address public lock;
     ITRADE public marketCap;
-    constructor() {
+    constructor(address _ssd, address _marketCap, address _marketNode) {
         owner = msg.sender;
+        marketNode = MARKETNODE(_marketNode);
+        ssd = IERC20(_ssd);
+        lock = address(new TokenLock(address(ssd)));
+        ssd.approve(lock, type(uint).max);
+        marketCap = ITRADE(_marketCap);
+        starNodeWork = new STARNODEWORK(_ssd, _marketNode, address(this));
     }
-
     function setYearHalfAmount(uint amount) external {
         require(msg.sender == owner, "No owner and set the year half amount");
         yearHalfAmount = amount;
@@ -76,20 +82,6 @@ contract SSDSTAKED {
         subHalfTime = _time;
     }
 
-    function setAddress(
-        address _marketNode,
-        address _starNodeWork,
-        address _ssd,
-        address _marketCap
-    ) external onlyOwner {
-        marketNode = MARKETNODE(_marketNode);
-        starNodeWork = STARNODEWORK(_starNodeWork);
-        ssd = IERC20(_ssd);
-        lock = address(new TokenLock(address(ssd)));
-        ssd.approve(lock, type(uint).max);
-        marketCap = ITRADE(_marketCap);
-    }
-
     function getRecordInfos(
         address account
     ) external view returns (recordInfo[] memory) {
@@ -98,7 +90,6 @@ contract SSDSTAKED {
 
     function take(uint index) external {
         address sender = msg.sender;
-        uint cTime = block.timestamp;
         uint ssdValue;
         uint amount;
         recordInfo[] storage info = record[sender];
@@ -203,6 +194,8 @@ contract SSDSTAKED {
             uint releaseAmount = (info.ssdAmount /
                 (info.endTime - info.stakeTime)) * time;
             ssd.transfer(sender, releaseAmount);
+            info.claimAmount += releaseAmount;
+
             info.updateTime = nowTime;
 
             day = (info.endTime - info.stakeTime);
@@ -218,8 +211,8 @@ contract SSDSTAKED {
             updateIndex(opreate.upStake, amount);
             updateUserIndex(sender, opreate.upStake, amount);
 
-            amount = (info.postionAmount * releaseAmount) / info.ssdAmount;
-            info.postionAmount = amount;
+            info.postionAmount -= amount;
+
             starNodeWork.updateHoldPosition(sender, -int(amount));
 
             if (info.updateTime == info.endTime) {
@@ -332,7 +325,8 @@ contract SSDSTAKED {
                 postionAmount: amount,
                 stakeTime: nowTime,
                 endTime: nowTime + _days,
-                updateTime: nowTime
+                updateTime: nowTime,
+                claimAmount: 0
             })
         );
         emit Stake(sender, _amount, amount, _days);
