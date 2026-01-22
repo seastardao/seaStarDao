@@ -49,8 +49,11 @@ contract MOSLPSSDPOOL {
         subHalfTime = _time;
     }
 
-    function sync() external {
+    function sync() public {
         address sender = msg.sender;
+        _sync(sender);
+    }
+    function _sync(address sender) internal {
         uint newAmount = IMosLpPool(mosLpPool).balanceOf(sender);
         uint temp;
         StakedInfo memory userInfo = userStakedInfos[sender];
@@ -92,9 +95,9 @@ contract MOSLPSSDPOOL {
 
     function claim() public {
         address sender = msg.sender;
+        _sync(sender);
         updateIndex(opreate.claim, 0);
         updateUserIndex(sender, opreate.claim, 0);
-
         StakedInfo storage userStakedInfo = userStakedInfos[sender];
 
         if (userStakedInfo.available > 0) {

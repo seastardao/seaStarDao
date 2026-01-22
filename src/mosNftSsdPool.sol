@@ -52,7 +52,10 @@ contract MOSNFTSSDPOOL {
     }
 
     function sync() external {
-        address sender = msg.sender;
+        _sync(msg.sender);
+    }
+
+    function _sync(address sender) internal {
         uint newAmount = IMosNftPool(mosNftPool).balanceOf(sender);
         uint temp;
         StakedInfo memory userInfo = userStakedInfos[sender];
@@ -70,7 +73,6 @@ contract MOSNFTSSDPOOL {
             updateUserIndex(sender, opreate.upStake, temp);
         }
     }
-
     function halfYear() internal returns (uint) {
         require(subHalfTime > 0, "SubHalf time error");
         startTime = startTime == 0 ? block.timestamp : startTime;
@@ -94,6 +96,7 @@ contract MOSNFTSSDPOOL {
 
     function claim() public {
         address sender = msg.sender;
+        _sync(sender);
         updateIndex(opreate.claim, 0);
         updateUserIndex(sender, opreate.claim, 0);
 
