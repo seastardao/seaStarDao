@@ -7,7 +7,7 @@ import {TokenLock} from "./lock.sol";
 contract MOSLPSSDPOOL {
     enum opreate {
         stake,
-        upStake,
+        unStake,
         claim
     }
 
@@ -64,8 +64,8 @@ contract MOSLPSSDPOOL {
         }
         if (newAmount < userInfo.stakedAmount) {
             temp = userInfo.stakedAmount - newAmount;
-            updateIndex(opreate.upStake, temp);
-            updateUserIndex(sender, opreate.upStake, temp);
+            updateIndex(opreate.unStake, temp);
+            updateUserIndex(sender, opreate.unStake, temp);
         }
     }
 
@@ -127,11 +127,12 @@ contract MOSLPSSDPOOL {
         if (_oprea == opreate.stake) {
             info.stakedAmount += lpAmount;
         }
-        if (_oprea == opreate.upStake) {
+        if (_oprea == opreate.unStake) {
             info.stakedAmount -= lpAmount;
         }
-
-        info.updateTime = block.timestamp;
+        if (release > 0) {
+            info.updateTime = block.timestamp;
+        }
     }
 
     function awaitGetAmount(address user) external view returns (uint) {
@@ -180,7 +181,7 @@ contract MOSLPSSDPOOL {
         if (_oprea == opreate.stake) {
             info.stakedAmount += lpAmount;
         }
-        if (_oprea == opreate.upStake) {
+        if (_oprea == opreate.unStake) {
             info.stakedAmount -= lpAmount;
         }
 

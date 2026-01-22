@@ -3,9 +3,10 @@ pragma solidity ^0.8.0;
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/token/ERC721/IERC721.sol";
 import "@openzeppelin/contracts/token/ERC721/IERC721Receiver.sol";
+import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 import "./lock.sol";
 
-contract CONSENSUSNFTPOOL is IERC721Receiver {
+contract CONSENSUSNFTPOOL is IERC721Receiver, ReentrancyGuard {
     enum opreate {
         stake,
         upStake,
@@ -84,7 +85,9 @@ contract CONSENSUSNFTPOOL is IERC721Receiver {
         if (_oprea == opreate.upStake) {
             info.stakedAmount -= 1;
         }
-        info.updateTime = block.timestamp;
+        if (release > 0) {
+            info.updateTime = block.timestamp;
+        }
     }
 
     function updateUserIndex(address user, opreate _oprea) internal {
@@ -167,7 +170,9 @@ contract CONSENSUSNFTPOOL is IERC721Receiver {
         return value;
     }
 
-    function pledgeNft(uint[] memory _tokenIds) external returns (bool) {
+    function pledgeNft(
+        uint[] memory _tokenIds
+    ) external nonReentrant returns (bool) {
         address _sender = msg.sender;
         for (uint i = 0; i < _tokenIds.length; i++) {
             _pledgeNft(_sender, _tokenIds[i]);
@@ -185,7 +190,7 @@ contract CONSENSUSNFTPOOL is IERC721Receiver {
         IERC721(consensusNft).transferFrom(_sender, address(this), _tokenid);
     }
 
-    function unpack(uint[] memory _tokenIds) external {
+    function unpack(uint[] memory _tokenIds) external nonReentrant {
         address sender = msg.sender;
         for (uint i = 0; i < _tokenIds.length; i++) {
             _unpack(sender, _tokenIds[i]);
@@ -199,8 +204,6 @@ contract CONSENSUSNFTPOOL is IERC721Receiver {
         updateIndex(opreate.upStake);
         updateUserIndex(sender, opreate.upStake);
 
-        IERC721(consensusNft).safeTransferFrom(address(this), sender, _tokenid);
-
         for (uint i = 0; i < list.length; i++) {
             if (list[i] == _tokenid) {
                 list[i] = list[list.length - 1];
@@ -208,6 +211,7 @@ contract CONSENSUSNFTPOOL is IERC721Receiver {
                 break;
             }
         }
+        IERC721(consensusNft).safeTransferFrom(address(this), sender, _tokenid);
     }
 
     function onERC721Received(

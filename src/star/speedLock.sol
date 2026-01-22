@@ -13,6 +13,7 @@ contract SPEEDLOCK {
     IERC20 public lockToken;
     address public oldLock;
     address public starNodeWork;
+    address public locker;
     mapping(address => uint) public speedCount;
     uint public targetTime = 30 days;
 
@@ -33,6 +34,7 @@ contract SPEEDLOCK {
         lockToken = IERC20(_ssd);
         starNodeWork = _starNodeWork;
         starNodeData = STARNODEDATA(_starNodeData);
+        locker = msg.sender;
     }
 
     function awaitSpeedRate(address _user) public view returns (uint) {
@@ -61,6 +63,7 @@ contract SPEEDLOCK {
     }
 
     function locking(address account, uint256 _lock) external {
+        require(msg.sender == locker, "only locker");
         uint256 _now = block.timestamp;
         uint temp = speedUpdateTime[account];
         uint day = (_now - temp);

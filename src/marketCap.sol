@@ -15,8 +15,8 @@ contract MARKETCAP {
     using Math for uint256;
     address public owner;
     address public ssd;
-    address public mos = 0xc9C8050639c4cC0DF159E0e47020d6e392191407;
-    address public mosPair = 0xB51f9508B88F0868aE14E74C5D7d1F34E2f419c1;
+    address constant mos = 0xc9C8050639c4cC0DF159E0e47020d6e392191407;
+    address constant mosPair = 0xB51f9508B88F0868aE14E74C5D7d1F34E2f419c1;
     address public ssdPair;
     address public deadAddress = address(0xDead);
     uint public marketPrice;
@@ -31,7 +31,7 @@ contract MARKETCAP {
     address public treasury;
     bool private _locked;
     mapping(address => bool) private tradeAddress;
-    IROUTE public route = IROUTE(0x10ED43C718714eb63d5aA57B78B54704E256024E);
+    IROUTE constant route = IROUTE(0x10ED43C718714eb63d5aA57B78B54704E256024E);
 
     constructor(address _ssd) {
         owner = msg.sender;
@@ -93,7 +93,7 @@ contract MARKETCAP {
         if (currentPrice >= price) {
             uint targetPrice = marketPrice + (marketPrice * 3) / 100;
 
-            uint mintAmount = computerMintSsd(targetPrice);
+            uint mintAmount = computerSsd(targetPrice);
             if (mintAmount == 0) {
                 return false;
             }
@@ -119,7 +119,7 @@ contract MARKETCAP {
         price = marketPrice - (marketPrice * 5) / 100;
         if (currentPrice <= price) {
             uint targetPrice = (marketPrice * 97) / 100;
-            uint amount = computerMintSsd(targetPrice);
+            uint amount = computerSsd(targetPrice);
 
             return true;
         }
@@ -149,7 +149,7 @@ contract MARKETCAP {
         }
     }
 
-    function computerMintSsd(uint _targetPrice) private returns (uint) {
+    function computerSsd(uint _targetPrice) private returns (uint) {
         uint res0;
         uint res1;
 
@@ -224,7 +224,7 @@ contract MARKETCAP {
         uint amountA,
         uint amountB
     ) private returns (uint liquidity) {
-        (uint amountA, uint amountB, uint liquidity) = route.addLiquidity(
+        (, , uint liquidity) = route.addLiquidity(
             tokenA,
             tokenB,
             amountA,

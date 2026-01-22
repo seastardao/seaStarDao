@@ -7,13 +7,11 @@ import {
 contract CONSENSUSNFT is ERC721Enumerable {
     uint256 public _nextTokenId;
     address public consensus;
-    address public owner;
     constructor(address _consensus) ERC721("ConsensusNFT", "CNFT") {
-        owner = msg.sender;
         consensus = _consensus;
     }
     function mintNft(address _user) external returns (uint) {
-        require(_nextTokenId <= 2000, "Max supply");
+        require(_nextTokenId < 2000, "Max supply");
         require(msg.sender == consensus, "Not consensus");
         uint256 tokenId = ++_nextTokenId;
         _mint(_user, tokenId);
@@ -28,9 +26,5 @@ contract CONSENSUSNFT is ERC721Enumerable {
         for (uint i = 0; i < tokenIds.length; i++) {
             approve(to, tokenIds[i]);
         }
-    }
-    function transferOwnership(address _newOwner) external {
-        require(msg.sender == owner, "Not owner");
-        owner = _newOwner;
     }
 }

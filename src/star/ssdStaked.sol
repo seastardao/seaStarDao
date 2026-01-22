@@ -35,6 +35,7 @@ contract SSDSTAKED {
         uint postionAmount;
         uint updateTime;
         uint claimAmount;
+        uint marketPrice;
     }
     StakedInfo public globalStakedInfo;
     mapping(address => StakedInfo) public userStakedInfos;
@@ -191,8 +192,10 @@ contract SSDSTAKED {
             uint day;
             uint time = nowTime - info.updateTime;
             uint amount;
-            uint releaseAmount = (info.ssdAmount /
-                (info.endTime - info.stakeTime)) * time;
+
+            uint releaseAmount = (info.ssdAmount * time) /
+                (info.endTime - info.stakeTime);
+
             ssd.transfer(sender, releaseAmount);
             info.claimAmount += releaseAmount;
 
@@ -211,9 +214,11 @@ contract SSDSTAKED {
             updateIndex(opreate.upStake, amount);
             updateUserIndex(sender, opreate.upStake, amount);
 
-            info.postionAmount -= amount;
-
-            starNodeWork.updateHoldPosition(sender, -int(amount));
+            if (releaseAmount > 0) {
+                amount = (releaseAmount * info.marketPrice) / 1e18;
+                info.postionAmount -= amount;
+                starNodeWork.updateHoldPosition(sender, -int(amount));
+            }
 
             if (info.updateTime == info.endTime) {
                 recordInfo[] storage infos = record[sender];
@@ -304,14 +309,13 @@ contract SSDSTAKED {
     }
     function stake(uint _amount, uint _days) external {
         address sender = msg.sender;
-
         uint amount;
+        uint marketPrice;
         address sup = marketNode.supervisor(sender);
         require(sup != address(0), "Supervisor not found");
-
         if (_days >= days_30) {
-            uint rate3 = marketCap.marketPrice();
-            amount = (rate3 * _amount) / 1e18;
+            marketPrice = marketCap.marketPrice();
+            amount = (marketPrice * _amount) / 1e18;
             if (amount > 0) {
                 starNodeWork.updateHoldPosition(sender, int(amount));
             }
@@ -326,7 +330,8 @@ contract SSDSTAKED {
                 stakeTime: nowTime,
                 endTime: nowTime + _days,
                 updateTime: nowTime,
-                claimAmount: 0
+                claimAmount: 0,
+                marketPrice: marketPrice
             })
         );
         emit Stake(sender, _amount, amount, _days);

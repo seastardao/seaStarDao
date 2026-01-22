@@ -14,6 +14,7 @@ contract TokenLock {
     IERC20 public lockToken;
     address public oldLock;
     address public owner;
+    address public locker;
 
     struct LockedToken {
         uint256 locked;
@@ -28,23 +29,23 @@ contract TokenLock {
         lockToken = IERC20(_lockToken);
         UPGRADE_LOCK_DURATION = 360 days;
         owner = msg.sender;
+        locker = msg.sender;
     }
     function locking(address account, uint256 _lock) external {
+        require(msg.sender == locker, "only locker");
         lockToken.safeTransferFrom(msg.sender, address(this), _lock);
         LockedToken storage lt = upgradeLockedTokens[account];
         uint256 _now = block.timestamp;
         if (_now < lt.lockTime + UPGRADE_LOCK_DURATION) {
-            //期间内锁仓
-            uint256 amount = (lt.locked * (_now - lt.lockTime)) / //释放出来的数量
+            uint256 amount = (lt.locked * (_now - lt.lockTime)) /
                 UPGRADE_LOCK_DURATION;
-            lt.locked = lt.locked - amount + _lock; //期间内，释放出来的量进行结算，并追加新的锁仓量
+            lt.locked = lt.locked - amount + _lock;
             lt.unlocked += int256(amount);
         } else {
-            //第一次锁仓,或者超了时间
-            lt.unlocked += int256(lt.locked); //超过了时间时,释放所有的锁仓量
-            lt.locked = _lock; //更新新的锁仓量
+            lt.unlocked += int256(lt.locked);
+            lt.locked = _lock;
         }
-        lt.lockTime = _now; //更新时间
+        lt.lockTime = _now;
 
         emit Locking(account, _lock);
     }

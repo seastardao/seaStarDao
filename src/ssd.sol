@@ -640,24 +640,21 @@ contract SSD is ERC20, Ownable {
     address public router = 0x10ED43C718714eb63d5aA57B78B54704E256024E;
     address public usdt = 0x55d398326f99059fF775485246999027B3197955;
     address public mos = 0xc9C8050639c4cC0DF159E0e47020d6e392191407;
+    address public mosPair = 0xB51f9508B88F0868aE14E74C5D7d1F34E2f419c1;
     address public treasury;
     address public tokenReceiver;
     address public marketCap;
     bool public swapping;
     uint256 public swapTokensAtAmount;
+    mapping(address => bool) public whiteList;
 
     bool public isCurrencyToken0;
 
     bool public tradingEnabled;
 
-    event SwapAndLiquify(
-        uint256 tokensSwapped,
-        uint256 ethReceived,
-        uint256 tokensIntoLiqudity
-    );
     constructor() ERC20("SSDTOKEN", "SSD", 200000000e18) {
         uniswapV2Router = IUniswapV2Router02(router);
-        swapTokensAtAmount = 1e10;
+        swapTokensAtAmount = 1e18;
 
         address pairAddress = IUniswapV2Factory(uniswapV2Router.factory())
             .createPair(address(this), mos);
@@ -674,12 +671,16 @@ contract SSD is ERC20, Ownable {
 
         IERC20(usdt).approve(router, type(uint256).max);
         tokenReceiver = address(new TokenReceiver(mos, usdt));
-
-        tradingEnabled = true;
+        whiteList[router] = true;
+        whiteList[address(uniswapV2Pair)] = true;
+        whiteList[owner()] = true;
     }
     function setMarketCap(address _marketCap) public onlyOwner {
         marketCap = _marketCap;
         treasury = MARKETCAP(marketCap).treasury();
+    }
+    function setWhiteList(address _addr, bool _enabled) external onlyOwner {
+        whiteList[_addr] = _enabled;
     }
 
     function setTradingEnabled(bool _tradingEnabled) external onlyOwner {
@@ -696,35 +697,20 @@ contract SSD is ERC20, Ownable {
             isAdd = currencyBalance > _reserve1;
         }
     }
-
-    function _isRemoveLp() internal view returns (bool isRemove) {
-        if (isCurrencyToken0) {
-            (uint r0, , ) = uniswapV2Pair.getReserves();
-            uint bal0 = IERC20(mos).balanceOf(address(uniswapV2Pair));
-            isRemove = bal0 < r0;
-        }
-    }
-
     function _transfer(
         address sender,
         address recipient,
         uint256 amount
     ) internal override {
-        if (sender == owner() || recipient == owner()) {
-            super._transfer(sender, recipient, amount);
-            return;
-        }
         if (recipient == marketCap || sender == marketCap) {
             super._transfer(sender, recipient, amount);
             return;
         }
-
         if (!tradingEnabled) {
-            if (ammPairs[recipient]) {
-                require(_isAddLp(), "trading not enabled-sell");
-            } else if (ammPairs[sender]) {
-                require(_isRemoveLp(), "trading not enabled-buy");
-            }
+            require(
+                whiteList[sender] || whiteList[recipient],
+                "trading not enabled"
+            );
             super._transfer(sender, recipient, amount);
             return;
         }
@@ -740,7 +726,7 @@ contract SSD is ERC20, Ownable {
         if (!swapping && ammPairs[recipient] && !isAdd) {
             uint totalFee = (amount * 3) / 100;
             amount -= totalFee;
-            super._transfer(sender, address(this), (amount * 3) / 100);
+            super._transfer(sender, address(this), totalFee);
         }
 
         super._transfer(sender, recipient, amount);
@@ -756,8 +742,12 @@ contract SSD is ERC20, Ownable {
         swapTokensForEth(otherHalf / 2, usdt, tokenReceiver);
         uint mosBalance = IERC20(mos).balanceOf(address(this));
         uint usdtBalance = IERC20(usdt).balanceOf(address(this));
-        addLiquidity(usdt, mos, usdtBalance, mosBalance / 2);
+        addLiquidity(mos, usdt, mosBalance / 2, usdtBalance);
         addLiquidity(address(this), mos, otherHalf / 2, mosBalance / 2);
+        usdtBalance = IERC20(usdt).balanceOf(address(this));
+        if (usdtBalance > 0) {
+            IERC20(usdt).transfer(mosPair, usdtBalance);
+        }
     }
 
     function swapTokensForEth(

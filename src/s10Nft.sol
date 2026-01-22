@@ -5,7 +5,7 @@ import {
     ERC721
 } from "@openzeppelin/contracts/token/ERC721/extensions/ERC721Enumerable.sol";
 interface ISTARNODEDATA {
-    function starLinkLevel(address _user) external view returns (uint);
+    function starLevel(address _user) external view returns (uint);
 }
 contract S10NFT is ERC721Enumerable {
     uint public _nextTokenId;
@@ -16,7 +16,7 @@ contract S10NFT is ERC721Enumerable {
         starNodeData = _starNodeData;
     }
     function mint(address _user) external returns (uint256) {
-        uint _level = ISTARNODEDATA(starNodeData).starLinkLevel(_user);
+        uint _level = ISTARNODEDATA(starNodeData).starLevel(_user);
         require(_level == level, "Not S10");
         require(!isMint[_user], "Already minted");
         uint256 tokenId = ++_nextTokenId;

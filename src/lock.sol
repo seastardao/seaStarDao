@@ -14,6 +14,7 @@ contract TokenLock {
     IERC20 public lockToken;
     address public oldLock;
     address public owner;
+    address public locker;
 
     struct LockedToken {
         uint256 locked;
@@ -28,8 +29,10 @@ contract TokenLock {
         lockToken = IERC20(_lockToken);
         UPGRADE_LOCK_DURATION = 360 days;
         owner = msg.sender;
+        locker = msg.sender;
     }
     function locking(address account, uint256 _lock) external {
+        require(msg.sender == locker, "only locker");
         lockToken.safeTransferFrom(msg.sender, address(this), _lock);
         LockedToken storage lt = upgradeLockedTokens[account];
         uint256 _now = block.timestamp;

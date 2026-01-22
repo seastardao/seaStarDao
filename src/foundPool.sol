@@ -4,12 +4,13 @@ pragma solidity ^0.8.0;
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/token/ERC721/IERC721.sol";
 import "@openzeppelin/contracts/token/ERC721/IERC721Receiver.sol";
+import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 import "./lock.sol";
 import "./foundNft.sol";
 event PledgeNft(address indexed user, uint256 tokenId);
 event Unpack(address indexed user, uint256 tokenId);
 event Claim(address indexed user, uint256 amount);
-contract FOUNDPOOL is IERC721Receiver {
+contract FOUNDPOOL is IERC721Receiver, ReentrancyGuard {
     enum opreate {
         stake,
         upStake,
@@ -94,7 +95,9 @@ contract FOUNDPOOL is IERC721Receiver {
         if (_oprea == opreate.upStake) {
             info.stakedAmount -= 1;
         }
-        info.updateTime = block.timestamp;
+        if (release > 0) {
+            info.updateTime = block.timestamp;
+        }
     }
 
     function updateUserIndex(address user, opreate _oprea) internal {
@@ -171,11 +174,12 @@ contract FOUNDPOOL is IERC721Receiver {
         value = value * infoUser.stakedAmount;
 
         value = value + infoUser.available;
-        value = value;
         return value;
     }
 
-    function pledgeNft(uint[] memory _tokenIds) external returns (bool) {
+    function pledgeNft(
+        uint[] memory _tokenIds
+    ) external nonReentrant returns (bool) {
         address _sender = msg.sender;
         for (uint i = 0; i < _tokenIds.length; i++) {
             _pledgeNft(_sender, _tokenIds[i]);
@@ -194,7 +198,7 @@ contract FOUNDPOOL is IERC721Receiver {
         FOUNDNFT(foundNft).transferFrom(_sender, address(this), _tokenid);
     }
 
-    function unpack(uint[] memory _tokenIds) external {
+    function unpack(uint[] memory _tokenIds) external nonReentrant {
         address sender = msg.sender;
         for (uint i = 0; i < _tokenIds.length; i++) {
             _unpack(sender, _tokenIds[i]);
@@ -208,7 +212,6 @@ contract FOUNDPOOL is IERC721Receiver {
 
         updateIndex(opreate.upStake);
         updateUserIndex(sender, opreate.upStake);
-        FOUNDNFT(foundNft).safeTransferFrom(address(this), sender, _tokenid);
 
         for (uint i = 0; i < list.length; i++) {
             if (list[i] == _tokenid) {
@@ -217,6 +220,7 @@ contract FOUNDPOOL is IERC721Receiver {
                 break;
             }
         }
+        FOUNDNFT(foundNft).safeTransferFrom(address(this), sender, _tokenid);
     }
 
     function onERC721Received(

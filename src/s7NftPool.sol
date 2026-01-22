@@ -95,7 +95,9 @@ contract S7NFTPOOL is IERC721Receiver {
         if (_oprea == opreate.upStake) {
             info.stakedAmount -= 1;
         }
-        info.updateTime = block.timestamp;
+        if (release > 0) {
+            info.updateTime = block.timestamp;
+        }
     }
 
     function updateUserIndex(address user, opreate _oprea) internal {

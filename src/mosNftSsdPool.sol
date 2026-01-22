@@ -132,8 +132,9 @@ contract MOSNFTSSDPOOL {
         if (_oprea == opreate.upStake) {
             info.stakedAmount -= lpAmount;
         }
-
-        info.updateTime = block.timestamp;
+        if (release > 0) {
+            info.updateTime = block.timestamp;
+        }
     }
 
     function awaitGetAmount(address user) external view returns (uint) {

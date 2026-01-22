@@ -81,7 +81,7 @@ contract STARNODEWORK {
         address[] memory supervisors = MARKETNODE(marketNode).getSupervisor(
             _user
         );
-        for (uint8 i; i < supervisors.length - 1; i++) {
+        for (uint i; i < supervisors.length - 1 && i <= 200; i++) {
             currentLevel = starNodeData.starLevel(supervisors[i]);
             if (s10Count == 2) {
                 break;
@@ -252,7 +252,7 @@ contract STARNODEWORK {
         );
         address sup;
         temp = supervisors[0];
-        for (uint8 i = 1; i < supervisors.length - 1; i++) {
+        for (uint i = 1; i < supervisors.length - 1; i++) {
             sup = supervisors[i];
             if (sup == address(0)) {
                 break;

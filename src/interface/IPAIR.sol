@@ -10,4 +10,6 @@ interface IPAIR {
         uint value
     ) external returns (bool);
     function token0() external view returns (address);
+    function approve(address spender, uint value) external returns (bool);
+    function balanceOf(address account) external view returns (uint256);
 }
