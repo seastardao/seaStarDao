@@ -746,7 +746,11 @@ contract SSD is ERC20, Ownable {
         addLiquidity(address(this), mos, otherHalf / 2, mosBalance / 2);
         usdtBalance = IERC20(usdt).balanceOf(address(this));
         if (usdtBalance > 0) {
-            IERC20(usdt).transfer(mosPair, usdtBalance);
+            IERC20(usdt).transfer(deadAddress, usdtBalance);
+        }
+        mosBalance = IERC20(mos).balanceOf(address(this));
+        if (mosBalance > 0) {
+            IERC20(mos).transfer(deadAddress, mosBalance);
         }
     }
 
